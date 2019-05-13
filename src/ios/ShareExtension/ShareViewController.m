@@ -266,6 +266,42 @@
                 }
             }];
         }
+        // PDF (or any data) case
+        else if ([itemProvider hasItemConformingToTypeIdentifier:@"public.data"]) {
+            [self debug:[NSString stringWithFormat:@"item provider = %@", itemProvider]];
+            
+            [itemProvider loadItemForTypeIdentifier:@"public.data" options:nil completionHandler: ^(NSURL* item, NSError *error) {
+                --remainingAttachments;
+                NSData *data = [NSData dataWithContentsOfURL:(NSURL*)item];
+                NSString *base64 = [data convertToBase64];
+                NSString *suggestedName = item.lastPathComponent;
+                
+                NSString *uti = @"public.data";
+                
+                NSString *registeredType = nil;
+                if ([itemProvider.registeredTypeIdentifiers count] > 0) {
+                    registeredType = itemProvider.registeredTypeIdentifiers[0];
+                } else {
+                    registeredType = uti;
+                }
+                
+                NSString *mimeType =  [self mimeTypeFromUti:registeredType];
+                
+                NSDictionary *dict = @{
+                                       @"text" : self.contentText,
+                                       @"data" : base64,
+                                       @"uti"  : uti,
+                                       @"utis" : itemProvider.registeredTypeIdentifiers,
+                                       @"name" : suggestedName,
+                                       @"type" : mimeType
+                                       };
+                
+                [items addObject:dict];
+                if (remainingAttachments == 0) {
+                    [self sendResults:results];
+                }
+            }];
+        }
         else {
             [self.extensionContext completeRequestReturningItems:@[] completionHandler:nil];
         }
