@@ -157,23 +157,23 @@
 
     BOOL isLoggedIn = [self.userDefaults boolForKey:@"loggedIn"];
 
-    //if (!isLoggedIn)
+    if (!isLoggedIn)
     {
 
         NSString *alertTitle = NSLocalizedString(@"Sharing error", @"Sharing error alert title");
         NSString *alertMessage = NSLocalizedString(@"You have to be logged in in order to share items.", @"Sharing error alert message");
 
         UIAlertController *alert = [UIAlertController
-                                     alertControllerWithTitle: alertTitle
-                                     message: alertMessage
-                                     preferredStyle:UIAlertControllerStyleAlert];
+                                    alertControllerWithTitle: alertTitle
+                                    message: alertMessage
+                                    preferredStyle:UIAlertControllerStyleAlert];
         UIAlertAction *okButton = [UIAlertAction
-                                    actionWithTitle:@"OK"
-                                    style:UIAlertActionStyleDefault
-                                    handler: ^(UIAlertAction * action) {
+                                   actionWithTitle:@"OK"
+                                   style:UIAlertActionStyleDefault
+                                   handler: ^(UIAlertAction * action) {
                                        // Shut down the extension when the OK button clicked.
                                        [self.extensionContext completeRequestReturningItems:@[] completionHandler:nil];
-                                    }];
+                                   }];
         [alert addAction:okButton];
 
         [self presentViewController:alert animated:YES completion: nil];
@@ -183,9 +183,9 @@
     __block int remainingAttachments = ((NSExtensionItem*)self.extensionContext.inputItems[0]).attachments.count;
     __block NSMutableArray *items = [[NSMutableArray alloc] init];
     __block NSDictionary *results = @{
-                                          @"text" : self.contentText,
-                                          @"backURL": self.backURL != nil ? self.backURL : @"",
-                                          @"items": items,
+                                      @"text" : self.contentText,
+                                      @"backURL": self.backURL != nil ? self.backURL : @"",
+                                      @"items": items,
                                       };
 
     for (NSItemProvider* itemProvider in ((NSExtensionItem*)self.extensionContext.inputItems[0]).attachments) {
@@ -196,14 +196,18 @@
                 --remainingAttachments;
                 [self debug:[NSString stringWithFormat:@"public.url = %@", item]];
                 NSString *uti = @"public.url";
+                NSData *data = [NSData dataWithContentsOfURL:(NSURL*)item];
+                NSString *base64 = [data convertToBase64];
+                NSString *suggestedName = item.lastPathComponent;
                 NSDictionary *dict = @{
 
-                                           @"data" : item.absoluteString,
-                                           @"uti": uti,
-                                           @"utis": itemProvider.registeredTypeIdentifiers,
-                                           @"name": @"",
-                                           @"type": [self mimeTypeFromUti:uti],
-                                      };
+                                       @"data" : item.absoluteString,
+                                       @"uti": uti,
+                                       @"utis": itemProvider.registeredTypeIdentifiers,
+                                       @"name": suggestedName,
+                                       @"type": [self mimeTypeFromUti:uti],
+                                       @"base64": base64,
+                                       };
                 [items addObject:dict];
                 if (remainingAttachments == 0) {
                     [self sendResults:results];
@@ -217,12 +221,12 @@
                 [self debug:[NSString stringWithFormat:@"public.text = %@", item]];
                 NSString *uti = @"public.text";
                 NSDictionary *dict = @{
-                                           @"text" : self.contentText,
-                                           @"data" : item,
-                                           @"uti": uti,
-                                           @"utis": itemProvider.registeredTypeIdentifiers,
-                                           @"name": @"",
-                                           @"type": [self mimeTypeFromUti:uti],
+                                       @"text" : self.contentText,
+                                       @"data" : item,
+                                       @"uti": uti,
+                                       @"utis": itemProvider.registeredTypeIdentifiers,
+                                       @"name": @"",
+                                       @"type": [self mimeTypeFromUti:uti],
                                        };
                 [items addObject:dict];
                 if (remainingAttachments == 0) {
@@ -252,13 +256,13 @@
                 NSString *mimeType =  [self mimeTypeFromUti:registeredType];
 
                 NSDictionary *dict = @{
-                                           @"text" : self.contentText,
-                                           @"data" : base64,
-                                           @"uti"  : uti,
-                                           @"utis" : itemProvider.registeredTypeIdentifiers,
-                                           @"name" : suggestedName,
-                                           @"type" : mimeType
-                                      };
+                                       @"text" : self.contentText,
+                                       @"data" : base64,
+                                       @"uti"  : uti,
+                                       @"utis" : itemProvider.registeredTypeIdentifiers,
+                                       @"name" : suggestedName,
+                                       @"type" : mimeType
+                                       };
 
                 [items addObject:dict];
                 if (remainingAttachments == 0) {
@@ -269,24 +273,24 @@
         // PDF (or any data) case
         else if ([itemProvider hasItemConformingToTypeIdentifier:@"public.data"]) {
             [self debug:[NSString stringWithFormat:@"item provider = %@", itemProvider]];
-            
+
             [itemProvider loadItemForTypeIdentifier:@"public.data" options:nil completionHandler: ^(NSURL* item, NSError *error) {
                 --remainingAttachments;
                 NSData *data = [NSData dataWithContentsOfURL:(NSURL*)item];
                 NSString *base64 = [data convertToBase64];
                 NSString *suggestedName = item.lastPathComponent;
-                
+
                 NSString *uti = @"public.data";
-                
+
                 NSString *registeredType = nil;
                 if ([itemProvider.registeredTypeIdentifiers count] > 0) {
                     registeredType = itemProvider.registeredTypeIdentifiers[0];
                 } else {
                     registeredType = uti;
                 }
-                
+
                 NSString *mimeType =  [self mimeTypeFromUti:registeredType];
-                
+
                 NSDictionary *dict = @{
                                        @"text" : self.contentText,
                                        @"data" : base64,
@@ -295,7 +299,7 @@
                                        @"name" : suggestedName,
                                        @"type" : mimeType
                                        };
-                
+
                 [items addObject:dict];
                 if (remainingAttachments == 0) {
                     [self sendResults:results];
@@ -321,9 +325,9 @@
     [self.extensionContext completeRequestReturningItems:@[] completionHandler:nil];
 }
 
- - (void) didSelectPost {
-     [self debug:@"[didSelectPost]"];
- }
+- (void) didSelectPost {
+    [self debug:@"[didSelectPost]"];
+}
 
 - (NSArray*) configurationItems {
     // To add configuration options via table cells at the bottom of the sheet, return an array of SLComposeSheetConfigurationItem here.
